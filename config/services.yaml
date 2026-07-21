@@ -1,0 +1,40 @@
+# Voices this service can speak. The first entry for a language is its default.
+# `modelVersion` is opaque to callers but participates in Core's generation cache
+# key: bump it when a voice model changes so previously generated assets are
+# superseded. `modelFile` is a Piper model filename under PIPER_MODELS_DIR and is
+# ignored in simulate mode.
+parameters:
+    tts.voices:
+        - { name: 'dmitri', language: 'ru', modelVersion: 'piper-ru_RU-dmitri-medium-1.0', modelFile: 'ru_RU-dmitri-medium.onnx' }
+        - { name: 'irina', language: 'ru', modelVersion: 'piper-ru_RU-irina-medium-1.0', modelFile: 'ru_RU-irina-medium.onnx' }
+        - { name: 'lessac', language: 'en', modelVersion: 'piper-en_US-lessac-medium-1.0', modelFile: 'en_US-lessac-medium.onnx' }
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    AeroFlow\Tts\:
+        resource: '../src/'
+        exclude:
+            - '../src/Kernel.php'
+            - '../src/Voice/Voice.php'
+            - '../src/Voice/UnknownVoiceException.php'
+            - '../src/Synthesis/'
+
+    # Stateless voice catalog built from the configured definitions.
+    AeroFlow\Tts\Voice\VoiceCatalog:
+        factory: ['AeroFlow\Tts\Voice\VoiceCatalog', 'fromDefinitions']
+        arguments:
+            $definitions: '%tts.voices%'
+
+    # The engine is chosen at runtime by TTS_MODE (simulate | piper).
+    AeroFlow\Tts\Synthesis\SynthesizerFactory:
+        arguments:
+            $mode: '%env(TTS_MODE)%'
+            $piperBinary: '%env(PIPER_BINARY)%'
+            $modelsDirectory: '%env(PIPER_MODELS_DIR)%'
+            $timeoutSeconds: '%env(float:TTS_TIMEOUT_SECONDS)%'
+
+    AeroFlow\Tts\Synthesis\Synthesizer:
+        factory: ['@AeroFlow\Tts\Synthesis\SynthesizerFactory', 'create']

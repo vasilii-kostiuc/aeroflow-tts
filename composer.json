@@ -1,0 +1,54 @@
+{
+    "name": "aeroflow/tts",
+    "description": "AeroFlow TTS service — stateless text-to-speech, neutral to the airport domain.",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.4",
+        "ext-ctype": "*",
+        "ext-iconv": "*",
+        "ext-json": "*",
+        "symfony/console": "8.1.*",
+        "symfony/dotenv": "8.1.*",
+        "symfony/flex": "^2",
+        "symfony/framework-bundle": "8.1.*",
+        "symfony/process": "8.1.*",
+        "symfony/runtime": "^8.1",
+        "symfony/yaml": "8.1.*"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.95.8",
+        "phpunit/phpunit": "^13.2",
+        "symfony/browser-kit": "8.1.*",
+        "symfony/css-selector": "8.1.*"
+    },
+    "config": {
+        "allow-plugins": {
+            "symfony/flex": true,
+            "symfony/runtime": true
+        },
+        "sort-packages": true
+    },
+    "autoload": {
+        "psr-4": {
+            "AeroFlow\\Tts\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AeroFlow\\Tts\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "symfony": {
+            "allow-contrib": false,
+            "require": "8.1.*"
+        }
+    },
+    "scripts": {
+        "auto-scripts": {
+            "cache:clear": "symfony-cmd",
+            "assets:install %PUBLIC_DIR%": "symfony-cmd"
+        }
+    }
+}
