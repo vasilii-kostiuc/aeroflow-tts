@@ -1,0 +1,27 @@
+services:
+  # Stateless synthesis service. Core calls it synchronously over HTTP as a
+  # pre-step when the text of an announcement configuration is saved, so it has
+  # no database, no queues and no dependency on the rest of the stack.
+  #
+  # Built from Dockerfile.piper: real offline synthesis with the Piper binary and
+  # voice models baked in. Set TTS_MODE=simulate to fall back to silent WAVs on a
+  # host without the models (the same image supports both engines).
+  aeroflow_tts:
+    build:
+      context: .
+      dockerfile: Dockerfile.piper
+    container_name: aeroflow_tts
+    restart: unless-stopped
+    environment:
+      APP_ENV: prod
+      TTS_MODE: piper
+    # Published on the host because core lives in its own compose project and
+    # reaches its neighbours through host.docker.internal, as playback and agent
+    # do. 8080 is taken by core's nginx.
+    ports:
+      - "8081:8080"
+    healthcheck:
+      test: [ "CMD-SHELL", "php -r 'exit(@file_get_contents(\"http://127.0.0.1:8080/health\") ? 0 : 1);'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5

@@ -3,11 +3,20 @@
 # key: bump it when a voice model changes so previously generated assets are
 # superseded. `modelFile` is a Piper model filename under PIPER_MODELS_DIR and is
 # ignored in simulate mode.
+#
+# The `-2.0` versions supersede assets generated while the service ran in simulate
+# mode: those are silent WAVs, and Core's generation cache keys on
+# text + language + voice + modelVersion, so without a bump it would happily reuse
+# the silence forever instead of synthesizing real speech.
 parameters:
     tts.voices:
-        - { name: 'dmitri', language: 'ru', modelVersion: 'piper-ru_RU-dmitri-medium-1.0', modelFile: 'ru_RU-dmitri-medium.onnx' }
-        - { name: 'irina', language: 'ru', modelVersion: 'piper-ru_RU-irina-medium-1.0', modelFile: 'ru_RU-irina-medium.onnx' }
-        - { name: 'lessac', language: 'en', modelVersion: 'piper-en_US-lessac-medium-1.0', modelFile: 'en_US-lessac-medium.onnx' }
+        - { name: 'dmitri', language: 'ru', modelVersion: 'piper-ru_RU-dmitri-medium-2.0', modelFile: 'ru_RU-dmitri-medium.onnx' }
+        - { name: 'irina', language: 'ru', modelVersion: 'piper-ru_RU-irina-medium-2.0', modelFile: 'ru_RU-irina-medium.onnx' }
+        - { name: 'lessac', language: 'en', modelVersion: 'piper-en_US-lessac-medium-2.0', modelFile: 'en_US-lessac-medium.onnx' }
+        # Moldovan Romanian is served by the Romanian (ro_RO) model — same language,
+        # and Piper ships no ro-MD variant. The language code stays `ro-MD` because
+        # that is what Core's Localization catalog and its LanguageCode use.
+        - { name: 'mihai', language: 'ro-MD', modelVersion: 'piper-ro_RO-mihai-medium-1.0', modelFile: 'ro_RO-mihai-medium.onnx' }
 
 services:
     _defaults:

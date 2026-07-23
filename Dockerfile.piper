@@ -1,0 +1,75 @@
+# Real-synthesis image: the stateless TTS service plus the Piper engine and its
+# voice models baked in.
+#
+# Why a separate Dockerfile instead of a flag on the default one: the base image
+# is Alpine (musl) and stays small for CI, while the released Piper binary is
+# linked against glibc and will not run there. This variant therefore uses a
+# Debian base and carries ~250 MB of models, which CI does not need.
+#
+# The engine is still chosen at runtime by TTS_MODE, so this image can also be
+# run in `simulate` mode; it just defaults to `piper`.
+FROM php:8.4-cli AS build
+
+# Pinned: the last standalone (Python-free) Piper release. Its CLI —
+# `--model <path.onnx> --output_file -`, text on stdin — is what PiperSynthesizer
+# invokes. The successor (OHF-Voice/piper1-gpl) changed both the flags and the
+# packaging to pip, so moving to it is a deliberate step, not a version bump.
+ARG PIPER_VERSION=2023.11.14-2
+ARG VOICES_BASE=https://huggingface.co/rhasspy/piper-voices/resolve/main
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Binary and its bundled shared libraries + espeak-ng data land in /opt/piper.
+RUN curl -fsSL -o /tmp/piper.tar.gz \
+        "https://github.com/rhasspy/piper/releases/download/${PIPER_VERSION}/piper_linux_x86_64.tar.gz" \
+    && tar -xzf /tmp/piper.tar.gz -C /opt \
+    && rm /tmp/piper.tar.gz \
+    && test -x /opt/piper/piper
+
+# Each voice is two files: the model and its phoneme/config sidecar. Keep this
+# list in sync with `tts.voices` in config/services.yaml — a voice declared there
+# without its model here fails at synthesis time, not at boot.
+RUN set -eu; \
+    mkdir -p /opt/piper/models; \
+    for voice in \
+        ru/ru_RU/dmitri/medium/ru_RU-dmitri-medium \
+        ru/ru_RU/irina/medium/ru_RU-irina-medium \
+        en/en_US/lessac/medium/en_US-lessac-medium \
+        ro/ro_RO/mihai/medium/ro_RO-mihai-medium \
+    ; do \
+        name="$(basename "$voice")"; \
+        curl -fsSL -o "/opt/piper/models/${name}.onnx"      "${VOICES_BASE}/${voice}.onnx"; \
+        curl -fsSL -o "/opt/piper/models/${name}.onnx.json" "${VOICES_BASE}/${voice}.onnx.json"; \
+    done
+
+FROM php:8.4-cli
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates git unzip libgomp1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+COPY --from=build /opt/piper /opt/piper
+
+WORKDIR /app
+
+COPY composer.json composer.lock symfony.lock* ./
+RUN composer install --no-dev --no-scripts --prefer-dist --no-interaction --optimize-autoloader
+
+COPY . .
+
+ENV APP_ENV=prod
+ENV TTS_MODE=piper
+ENV PIPER_BINARY=/opt/piper/piper
+ENV PIPER_MODELS_DIR=/opt/piper/models
+# Piper ships its own onnxruntime and phonemize libraries next to the binary.
+ENV LD_LIBRARY_PATH=/opt/piper
+# Real synthesis is far slower than the simulate engine, especially on first use.
+ENV TTS_TIMEOUT_SECONDS=120
+
+EXPOSE 8080
+
+# Built-in PHP server is adequate for the low-volume, on-prem pre-generation use.
+CMD ["php", "-S", "0.0.0.0:8080", "-t", "public"]
