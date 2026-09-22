@@ -38,9 +38,10 @@ final readonly class PiperSynthesizer implements Synthesizer
             throw SynthesisException::engineFailed(trim($process->getErrorOutput()) ?: $exception->getMessage(), $exception);
         }
 
+        // Piper writes the generated WAV bytes to stdout, so we capture them as a string.
         $wav = $process->getOutput();
         if ('' === $wav) {
-            throw SynthesisException::engineFailed('piper produced no audio');
+            throw SynthesisException::engineFailed('piper produced no audio on stdout');
         }
 
         return $wav;
