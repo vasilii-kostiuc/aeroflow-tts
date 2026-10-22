@@ -8,7 +8,10 @@
 #
 # The engine is still chosen at runtime by TTS_MODE, so this image can also be
 # run in `simulate` mode; it just defaults to `piper`.
-FROM php:8.4-cli AS build
+#
+# Patch version pinned: 8.4.27 fixes CVE-2026-109618/109619 (unauthenticated
+# RCE in PHP request handling). Raise it on every PHP security release.
+FROM php:8.4.27-cli AS build
 
 # Pinned: the last standalone (Python-free) Piper release. Its CLI —
 # `--model <path.onnx> --output_file -`, text on stdin — is what PiperSynthesizer
@@ -44,7 +47,7 @@ RUN set -eu; \
         curl -fsSL -o "/opt/piper/models/${name}.onnx.json" "${VOICES_BASE}/${voice}.onnx.json"; \
     done
 
-FROM php:8.4-cli
+FROM php:8.4.27-cli
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates git unzip libgomp1 \

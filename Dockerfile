@@ -4,7 +4,7 @@
 # For real synthesis, set TTS_MODE=piper and provide the Piper binary and voice
 # models — either bake them into a derived image (COPY the binary onto PATH and
 # the *.onnx / *.onnx.json models into PIPER_MODELS_DIR) or mount them at runtime.
-FROM php:8.4-cli-alpine
+FROM php:8.4.27-cli-alpine
 
 RUN apk add --no-cache git unzip \
     && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
